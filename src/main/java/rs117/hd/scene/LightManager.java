@@ -63,6 +63,7 @@ import static java.lang.Math.cos;
 import static java.lang.Math.pow;
 import static net.runelite.api.Constants.*;
 import static net.runelite.api.Perspective.*;
+import static net.runelite.api.Perspective.SCENE_SIZE;
 import static rs117.hd.utils.HDUtils.TWO_PI;
 import static rs117.hd.utils.HDUtils.fract;
 import static rs117.hd.utils.HDUtils.mod;
@@ -174,7 +175,7 @@ public class LightManager {
 			client.getNpcs().forEach(npc -> addNpcLights(sceneContext, npc));
 		}
 
-		Tile[][][] tiles = sceneContext.scene.getExtendedTiles();
+		Tile[][][] tiles = sceneContext.scene.getTiles();
 		int[][][] tileHeights = sceneContext.scene.getTileHeights();
 
 		Iterator<Light> lightIterator = sceneContext.lights.iterator();
@@ -265,11 +266,11 @@ public class LightManager {
 
 				int plane = client.getPlane();
 				light.plane = plane;
-				int npcTileX = light.npc.getLocalLocation().getSceneX() + SceneUploader.SCENE_OFFSET;
-				int npcTileY = light.npc.getLocalLocation().getSceneY() + SceneUploader.SCENE_OFFSET;
+				int npcTileX = light.npc.getLocalLocation().getSceneX();
+				int npcTileY = light.npc.getLocalLocation().getSceneY();
 
 				// Some NPCs, such as Crystalline Hunllef in The Gauntlet, sometimes return scene X/Y values far outside the possible range.
-				if (npcTileX < 0 || npcTileY < 0 || npcTileX >= EXTENDED_SCENE_SIZE || npcTileY >= EXTENDED_SCENE_SIZE) {
+				if (npcTileX < 0 || npcTileY < 0 || npcTileX >= SCENE_SIZE || npcTileY >= SCENE_SIZE) {
 					light.visible = false;
 				} else {
 					// Tile null check is to prevent oddities caused by - once again - Crystalline Hunllef.
@@ -281,8 +282,8 @@ public class LightManager {
 					// Interpolate between tile heights based on specific scene coordinates.
 					float lerpX = (light.x % LOCAL_TILE_SIZE) / (float) LOCAL_TILE_SIZE;
 					float lerpY = (light.y % LOCAL_TILE_SIZE) / (float) LOCAL_TILE_SIZE;
-					int baseTileX = (int) Math.floor(light.x / (float) LOCAL_TILE_SIZE) + SceneUploader.SCENE_OFFSET;
-					int baseTileY = (int) Math.floor(light.y / (float) LOCAL_TILE_SIZE) + SceneUploader.SCENE_OFFSET;
+					int baseTileX = (int) Math.floor(light.x / (float) LOCAL_TILE_SIZE);
+					int baseTileY = (int) Math.floor(light.y / (float) LOCAL_TILE_SIZE);
 					float heightNorth = HDUtils.lerp(
 						tileHeights[plane][baseTileX][baseTileY + 1],
 						tileHeights[plane][baseTileX + 1][baseTileY + 1],
@@ -350,13 +351,13 @@ public class LightManager {
 			int distY = plugin.cameraFocalPoint[1] - light.y;
 			light.distanceSquared = distX * distX + distY * distY + light.z * light.z;
 
-			int tileX = (int) Math.floor(light.x / 128f) + SceneUploader.SCENE_OFFSET;
-			int tileY = (int) Math.floor(light.y / 128f) + SceneUploader.SCENE_OFFSET;
+			int tileX = (int) Math.floor(light.x / 128f);
+			int tileY = (int) Math.floor(light.y / 128f);
 
 			light.belowFloor = false;
 			light.aboveFloor = false;
 
-			if (tileX < EXTENDED_SCENE_SIZE && tileY < EXTENDED_SCENE_SIZE && tileX >= 0 && tileY >= 0 && light.plane >= 0) {
+			if (tileX < SCENE_SIZE && tileY < SCENE_SIZE && tileX >= 0 && tileY >= 0 && light.plane >= 0) {
 				Tile aboveTile = light.plane < 3 ? tiles[light.plane + 1][tileX][tileY] : null;
 
 				if (aboveTile != null && (aboveTile.getSceneTilePaint() != null || aboveTile.getSceneTileModel() != null)) {
@@ -441,7 +442,7 @@ public class LightManager {
 			}
 		}
 
-		for (Tile[][] plane : sceneContext.scene.getExtendedTiles()) {
+		for (Tile[][] plane : sceneContext.scene.getTiles()) {
 			for (Tile[] column : plane) {
 				for (Tile tile : column) {
 					if (tile == null) {
@@ -673,18 +674,18 @@ public class LightManager {
 				lightY += offsetY;
 			}
 
-			float tileX = (float) lightX / LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
-			float tileY = (float) lightY / LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
+			float tileX = (float) lightX / LOCAL_TILE_SIZE;
+			float tileY = (float) lightY / LOCAL_TILE_SIZE;
 			float lerpX = (lightX % LOCAL_TILE_SIZE) / (float) LOCAL_TILE_SIZE;
 			float lerpY = (lightY % LOCAL_TILE_SIZE) / (float) LOCAL_TILE_SIZE;
 			int tileMinX = (int) Math.floor(tileX);
 			int tileMinY = (int) Math.floor(tileY);
 			int tileMaxX = tileMinX + 1;
 			int tileMaxY = tileMinY + 1;
-			tileMinX = HDUtils.clamp(tileMinX, 0, EXTENDED_SCENE_SIZE - 1);
-			tileMinY = HDUtils.clamp(tileMinY, 0, EXTENDED_SCENE_SIZE - 1);
-			tileMaxX = HDUtils.clamp(tileMaxX, 0, EXTENDED_SCENE_SIZE - 1);
-			tileMaxY = HDUtils.clamp(tileMaxY, 0, EXTENDED_SCENE_SIZE - 1);
+			tileMinX = HDUtils.clamp(tileMinX, 0, SCENE_SIZE - 1);
+			tileMinY = HDUtils.clamp(tileMinY, 0, SCENE_SIZE - 1);
+			tileMaxX = HDUtils.clamp(tileMaxX, 0, SCENE_SIZE - 1);
+			tileMaxY = HDUtils.clamp(tileMaxY, 0, SCENE_SIZE - 1);
 
 			int[][][] tileHeights = sceneContext.scene.getTileHeights();
 			float heightNorth = HDUtils.lerp(
@@ -778,10 +779,8 @@ public class LightManager {
 
 		light.x = local.getX() + LOCAL_HALF_TILE_SIZE;
 		light.y = local.getY() + LOCAL_HALF_TILE_SIZE;
-		int tileExX = local.getSceneX() + SceneUploader.SCENE_OFFSET;
-		int tileExY = local.getSceneY() + SceneUploader.SCENE_OFFSET;
-		if (tileExX >= 0 && tileExY >= 0 && tileExX < EXTENDED_SCENE_SIZE && tileExY < EXTENDED_SCENE_SIZE) {
-			light.z = sceneContext.scene.getTileHeights()[light.plane][tileExX][tileExY] - light.def.height - 1;
+		if (local.isInScene()) {
+			light.z = sceneContext.scene.getTileHeights()[light.plane][local.getSceneX()][local.getSceneY()] - light.def.height - 1;
 		}
 
 		if (light.def.alignment == Alignment.NORTH || light.def.alignment == Alignment.NORTHEAST

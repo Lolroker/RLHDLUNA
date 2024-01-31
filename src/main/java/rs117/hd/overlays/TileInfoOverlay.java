@@ -35,6 +35,7 @@ import rs117.hd.utils.ModelHash;
 
 import static net.runelite.api.Constants.*;
 import static net.runelite.api.Perspective.*;
+import static net.runelite.api.Perspective.SCENE_SIZE;
 
 @Singleton
 public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
@@ -74,12 +75,12 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 		g.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
 
 		Scene scene = client.getScene();
-		Tile[][][] tiles = scene.getExtendedTiles();
+		Tile[][][] tiles = scene.getTiles();
 		int plane = ctrlPressed ? MAX_Z - 1 : client.getPlane();
 		for (int z = plane; z >= 0; z--) {
 			for (int isBridge = 1; isBridge >= 0; isBridge--) {
-				for (int x = 0; x < EXTENDED_SCENE_SIZE; x++) {
-					for (int y = 0; y < EXTENDED_SCENE_SIZE; y++) {
+				for (int x = 0; x < SCENE_SIZE; x++) {
+					for (int y = 0; y < SCENE_SIZE; y++) {
 						Tile tile = tiles[z][x][y];
 						boolean shouldDraw = tile != null && (isBridge == 0 || tile.getBridge() != null);
 						if (shouldDraw && drawTileInfo(g, scene, tile)) {
@@ -93,8 +94,8 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 		ctrlPressed = true;
 		for (int z = plane; z >= 0; z--) {
 			for (int isBridge = 1; isBridge >= 0; isBridge--) {
-				for (int x = 0; x < EXTENDED_SCENE_SIZE; x++) {
-					for (int y = 0; y < EXTENDED_SCENE_SIZE; y++) {
+				for (int x = 0; x < SCENE_SIZE; x++) {
+					for (int y = 0; y < SCENE_SIZE; y++) {
 						Tile tile = tiles[z][x][y];
 						boolean shouldDraw = tile != null && (isBridge == 0 || tile.getBridge() != null);
 						if (shouldDraw && drawTileInfo(g, scene, tile)) {
@@ -159,8 +160,6 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 
 		int tileX = tile.getSceneLocation().getX();
 		int tileY = tile.getSceneLocation().getY();
-		int tileExX = tileX + SceneUploader.SCENE_OFFSET;
-		int tileExY = tileY + SceneUploader.SCENE_OFFSET;
 		int plane = tile.getRenderLevel();
 
 		lines.add("Scene point: " + tileX + ", " + tileY + ", " + plane);
@@ -176,7 +175,7 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 		}
 
 		Scene scene = client.getScene();
-		short overlayId = scene.getOverlayIds()[plane][tileExX][tileExY];
+		short overlayId = scene.getOverlayIds()[plane][tileX][tileY];
 		Overlay overlay = Overlay.getOverlayBeforeReplacements(scene, tile);
 		Overlay replacementOverlay = overlay.resolveReplacements(scene, tile, plugin);
 		if (replacementOverlay != overlay) {
@@ -185,7 +184,7 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 			lines.add(String.format("Overlay: %s (%d)", overlay.name(), overlayId));
 		}
 
-		short underlayId = scene.getUnderlayIds()[plane][tileExX][tileExY];
+		short underlayId = scene.getUnderlayIds()[plane][tileX][tileY];
 		Underlay underlay = Underlay.getUnderlayBeforeReplacements(scene, tile);
 		Underlay replacementUnderlay = underlay.resolveReplacements(scene, tile, plugin);
 		if (replacementUnderlay != underlay) {
@@ -452,10 +451,8 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 	 */
 	public static Polygon getCanvasTilePoly(@Nonnull Client client, Scene scene, Tile tile) {
 		LocalPoint lp = tile.getLocalLocation();
-		int tileExX = lp.getSceneX() + SceneUploader.SCENE_OFFSET;
-		int tileExY = lp.getSceneY() + SceneUploader.SCENE_OFFSET;
 		int plane = tile.getRenderLevel();
-		if (tileExX < 0 || tileExY < 0 || tileExX >= EXTENDED_SCENE_SIZE || tileExY >= EXTENDED_SCENE_SIZE) {
+		if (!lp.isInScene()) {
 			return null;
 		}
 
@@ -489,9 +486,9 @@ public class TileInfoOverlay extends net.runelite.client.ui.overlay.Overlay {
 	}
 
 	private static int getHeight(Scene scene, int localX, int localY, int plane) {
-		int sceneX = (localX >> LOCAL_COORD_BITS) + SceneUploader.SCENE_OFFSET;
-		int sceneY = (localY >> LOCAL_COORD_BITS) + SceneUploader.SCENE_OFFSET;
-		if (sceneX < 0 || sceneY < 0 || sceneX >= EXTENDED_SCENE_SIZE || sceneY >= EXTENDED_SCENE_SIZE)
+		int sceneX = localX >> LOCAL_COORD_BITS;
+		int sceneY = localY >> LOCAL_COORD_BITS;
+		if (sceneX < 0 || sceneY < 0 || sceneX >= SCENE_SIZE || sceneY >= SCENE_SIZE)
 			return 0;
 
 		int[][][] tileHeights = scene.getTileHeights();

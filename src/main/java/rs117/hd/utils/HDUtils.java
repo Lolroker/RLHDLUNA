@@ -393,11 +393,11 @@ public class HDUtils {
 		return System.getProperty("sun.arch.data.model", "Unknown").equals("32");
 	}
 
-	public static boolean sceneIntersects(Scene scene, int numChunksExtended, Area area) {
-		return sceneIntersects(scene, numChunksExtended, area.aabbs);
+	public static boolean sceneIntersects(Scene scene, Area area) {
+		return sceneIntersects(scene, area.aabbs);
 	}
 
-	public static boolean sceneIntersects(Scene scene, int numChunksExtended, AABB... aabbs) {
+	public static boolean sceneIntersects(Scene scene, AABB... aabbs) {
 		if (scene.isInstance()) {
 			var templateChunks = scene.getInstanceTemplateChunks();
 			for (var plane : templateChunks) {
@@ -422,12 +422,11 @@ public class HDUtils {
 		} else {
 			int baseX = scene.getBaseX();
 			int baseY = scene.getBaseX();
-			int extended = numChunksExtended * CHUNK_SIZE;
 			AABB sceneAabb = new AABB(
-				baseX - extended,
-				baseY - extended,
-				baseX + SCENE_SIZE + extended - 1,
-				baseY + SCENE_SIZE + extended - 1
+				baseX,
+				baseY,
+				baseX + SCENE_SIZE - 1,
+				baseY + SCENE_SIZE - 1
 			);
 
 			for (var aabb : aabbs)

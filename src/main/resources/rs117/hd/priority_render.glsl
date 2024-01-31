@@ -205,8 +205,7 @@ void insert_face(uint localId, ModelInfo minfo, int adjPrio, int distance, int p
 }
 
 int tile_height(int z, int x, int y) {
-    #define ESCENE_OFFSET 40 // (184-104)/2
-    return texelFetch(tileHeightMap, ivec3(x + ESCENE_OFFSET, y + ESCENE_OFFSET, z), 0).r << 3;
+    return texelFetch(tileHeightMap, ivec3(x, y, z), 0).r << 3;
 }
 
 ivec4 hillskew_vertex(ivec4 v, int hillskew, int y, int plane) {

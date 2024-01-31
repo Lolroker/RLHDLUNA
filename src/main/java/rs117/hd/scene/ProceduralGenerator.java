@@ -113,15 +113,15 @@ public class ProceduralGenerator {
 		// between underlays and overlays for custom blending
 		sceneContext.vertexIsOverlay = new HashMap<>();
 
-		Tile[][][] tiles = sceneContext.scene.getExtendedTiles();
+		Tile[][][] tiles = sceneContext.scene.getTiles();
 		for (int z = 0; z < MAX_Z; ++z) {
-			for (int x = 0; x < EXTENDED_SCENE_SIZE; ++x)
-				for (int y = 0; y < EXTENDED_SCENE_SIZE; ++y)
+			for (int x = 0; x < SCENE_SIZE; ++x)
+				for (int y = 0; y < SCENE_SIZE; ++y)
 					if (tiles[z][x][y] != null)
 						generateDataForTile(sceneContext, tiles[z][x][y]);
 
-			for (int x = 0; x < EXTENDED_SCENE_SIZE; ++x)
-				for (int y = 0; y < EXTENDED_SCENE_SIZE; ++y)
+			for (int x = 0; x < SCENE_SIZE; ++x)
+				for (int y = 0; y < SCENE_SIZE; ++y)
 					if (tiles[z][x][y] != null && tiles[z][x][y].getBridge() != null)
 						generateDataForTile(sceneContext, tiles[z][x][y].getBridge());
 		}
@@ -151,8 +151,8 @@ public class ProceduralGenerator {
 		Underlay[] vertexUnderlays = new Underlay[faceCount * VERTICES_PER_FACE];
 		boolean[] vertexDefaultColor = new boolean[faceCount * VERTICES_PER_FACE];
 
-		int tileExX = tile.getSceneLocation().getX() + SceneUploader.SCENE_OFFSET;
-		int tileExY = tile.getSceneLocation().getY() + SceneUploader.SCENE_OFFSET;
+		int tileX = tile.getSceneLocation().getX();
+		int tileY = tile.getSceneLocation().getY();
 		int[] worldPos = sceneContext.localToWorld(tile.getLocalLocation(), tile.getRenderLevel());
 
 		Scene scene = sceneContext.scene;
@@ -174,15 +174,15 @@ public class ProceduralGenerator {
 
 			vertexHashes = tileVertexKeys(scene, tile);
 
-			if (tileExX >= EXTENDED_SCENE_SIZE - 2 && tileExY >= EXTENDED_SCENE_SIZE - 2) {
+			if (tileX >= SCENE_SIZE - 2 && tileY >= SCENE_SIZE - 2) {
 				// reduce the black scene edges by assigning surrounding colors
 				neColor = swColor;
 				nwColor = swColor;
 				seColor = swColor;
-			} else if (tileExY >= EXTENDED_SCENE_SIZE - 2) {
+			} else if (tileY >= SCENE_SIZE - 2) {
 				nwColor = swColor;
 				neColor = seColor;
-			} else if (tileExX >= EXTENDED_SCENE_SIZE - 2) {
+			} else if (tileX >= SCENE_SIZE - 2) {
 				neColor = nwColor;
 				seColor = swColor;
 			}
@@ -354,7 +354,7 @@ public class ProceduralGenerator {
 	private void generateUnderwaterTerrain(SceneContext sceneContext)
 	{
 		// true if a tile contains at least 1 face which qualifies as water
-		sceneContext.tileIsWater = new boolean[MAX_Z][EXTENDED_SCENE_SIZE][EXTENDED_SCENE_SIZE];
+		sceneContext.tileIsWater = new boolean[MAX_Z][SCENE_SIZE][SCENE_SIZE];
 		// true if a vertex is part of a face which qualifies as water; non-existent if not
 		sceneContext.vertexIsWater = new HashMap<>();
 		// true if a vertex is part of a face which qualifies as land; non-existent if not
@@ -362,21 +362,21 @@ public class ProceduralGenerator {
 		sceneContext.vertexIsLand = new HashMap<>();
 		// if true, the tile will be skipped when the scene is drawn
 		// this is due to certain edge cases with water on the same X/Y on different planes
-		sceneContext.skipTile = new boolean[MAX_Z][EXTENDED_SCENE_SIZE][EXTENDED_SCENE_SIZE];
+		sceneContext.skipTile = new boolean[MAX_Z][SCENE_SIZE][SCENE_SIZE];
 		// the height adjustment for each vertex, to be applied to the vertex'
 		// real height to create the underwater terrain
 		sceneContext.vertexUnderwaterDepth = new HashMap<>();
 		// the basic 'levels' of underwater terrain, used to sink terrain based on its distance
 		// from the shore, then used to produce the world-space height offset
 		// 0 = land
-		sceneContext.underwaterDepthLevels = new int[MAX_Z][EXTENDED_SCENE_SIZE + 1][EXTENDED_SCENE_SIZE + 1];
+		sceneContext.underwaterDepthLevels = new int[MAX_Z][SCENE_SIZE + 1][SCENE_SIZE + 1];
 		// the world-space height offsets of each vertex on the tile grid
 		// these offsets are interpolated to calculate offsets for vertices not on the grid (tilemodels)
-		final int[][][] underwaterDepths = new int[MAX_Z][EXTENDED_SCENE_SIZE + 1][EXTENDED_SCENE_SIZE + 1];
+		final int[][][] underwaterDepths = new int[MAX_Z][SCENE_SIZE + 1][SCENE_SIZE + 1];
 
 		for (int z = 0; z < MAX_Z; ++z)
 		{
-			for (int x = 0; x < EXTENDED_SCENE_SIZE; ++x) {
+			for (int x = 0; x < SCENE_SIZE; ++x) {
 				// set the array to 1 initially
 				// this assumes that all vertices are water;
 				// we will set non-water vertices to 0 in the next loop
@@ -385,12 +385,12 @@ public class ProceduralGenerator {
 		}
 
 		Scene scene = sceneContext.scene;
-		Tile[][][] tiles = scene.getExtendedTiles();
+		Tile[][][] tiles = scene.getTiles();
 
 		// figure out which vertices are water and assign some data
 		for (int z = 0; z < MAX_Z; ++z) {
-			for (int x = 0; x < EXTENDED_SCENE_SIZE; ++x) {
-				for (int y = 0; y < EXTENDED_SCENE_SIZE; ++y) {
+			for (int x = 0; x < SCENE_SIZE; ++x) {
+				for (int y = 0; y < SCENE_SIZE; ++y) {
 					if (tiles[z][x][y] == null) {
 						sceneContext.underwaterDepthLevels[z][x][y] = 0;
 						sceneContext.underwaterDepthLevels[z][x + 1][y] = 0;
@@ -514,8 +514,8 @@ public class ProceduralGenerator {
 									if (vertices[vertex][0] % Perspective.LOCAL_TILE_SIZE == 0 &&
 										vertices[vertex][1] % Perspective.LOCAL_TILE_SIZE == 0
 									) {
-										int vX = vertices[vertex][0] / Perspective.LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
-										int vY = vertices[vertex][1] / Perspective.LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
+										int vX = vertices[vertex][0] / Perspective.LOCAL_TILE_SIZE;
+										int vY = vertices[vertex][1] / Perspective.LOCAL_TILE_SIZE;
 
 										sceneContext.underwaterDepthLevels[z][vX][vY] = 0;
 									}
@@ -560,7 +560,7 @@ public class ProceduralGenerator {
 						// If it's on the edge of the scene, reset the depth so
 						// it creates a 'wall' to prevent fog from passing through.
 						// Not incredibly effective, but better than nothing.
-						if (x == 0 || y == 0 || x == EXTENDED_SCENE_SIZE || y == EXTENDED_SCENE_SIZE) {
+						if (x == 0 || y == 0 || x == SCENE_SIZE || y == SCENE_SIZE) {
 							sceneContext.underwaterDepthLevels[z][x][y] = 0;
 							continue;
 						}
@@ -624,8 +624,8 @@ public class ProceduralGenerator {
 		// Store the height offsets in a hashmap and calculate interpolated
 		// height offsets for non-corner vertices.
 		for (int z = 0; z < MAX_Z; ++z) {
-			for (int x = 0; x < EXTENDED_SCENE_SIZE; ++x) {
-				for (int y = 0; y < EXTENDED_SCENE_SIZE; ++y) {
+			for (int x = 0; x < SCENE_SIZE; ++x) {
+				for (int y = 0; y < SCENE_SIZE; ++y) {
 					if (!sceneContext.tileIsWater[z][x][y]) {
 						continue;
 					}
@@ -670,8 +670,8 @@ public class ProceduralGenerator {
 									// The vertex is at the corner of the tile;
 									// simply use the offset in the tile grid array.
 
-									int vX = vertices[vertex][0] / Perspective.LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
-									int vY = vertices[vertex][1] / Perspective.LOCAL_TILE_SIZE + SceneUploader.SCENE_OFFSET;
+									int vX = vertices[vertex][0] / Perspective.LOCAL_TILE_SIZE;
+									int vY = vertices[vertex][1] / Perspective.LOCAL_TILE_SIZE ;
 
 									sceneContext.vertexUnderwaterDepth.put(vertexKeys[vertex], underwaterDepths[z][vX][vY]);
 								}
@@ -681,10 +681,8 @@ public class ProceduralGenerator {
 									// interpolate between the height offsets at each corner to get the height offset
 									// of the vertex.
 
-									int tileX = x - SceneUploader.SCENE_OFFSET;
-									int tileY = y - SceneUploader.SCENE_OFFSET;
-									int localVertexX = vertices[vertex][0] - (tileX * Perspective.LOCAL_TILE_SIZE);
-									int localVertexY = vertices[vertex][1] - (tileY * Perspective.LOCAL_TILE_SIZE);
+									int localVertexX = vertices[vertex][0] - (x * Perspective.LOCAL_TILE_SIZE);
+									int localVertexY = vertices[vertex][1] - (y * Perspective.LOCAL_TILE_SIZE);
 									float lerpX = (float) localVertexX / (float) Perspective.LOCAL_TILE_SIZE;
 									float lerpY = (float) localVertexY / (float) Perspective.LOCAL_TILE_SIZE;
 									float northHeightOffset = lerp(
@@ -715,7 +713,7 @@ public class ProceduralGenerator {
 	{
 		sceneContext.vertexTerrainNormals = new HashMap<>();
 
-		for (Tile[][] plane : sceneContext.scene.getExtendedTiles()) {
+		for (Tile[][] plane : sceneContext.scene.getTiles()) {
 			for (Tile[] column : plane) {
 				for (Tile tile : column) {
 					if (tile != null) {
@@ -943,30 +941,28 @@ public class ProceduralGenerator {
 	private static int[][] tileVertices(Scene scene, Tile tile) {
 		int tileX = tile.getSceneLocation().getX();
 		int tileY = tile.getSceneLocation().getY();
-		int tileExX = tileX + SceneUploader.SCENE_OFFSET;
-		int tileExY = tileY + SceneUploader.SCENE_OFFSET;
 		int tileZ = tile.getRenderLevel();
 		int[][][] tileHeights = scene.getTileHeights();
 
 		int[] swVertex = new int[] {
 			tileX * Perspective.LOCAL_TILE_SIZE,
 			tileY * Perspective.LOCAL_TILE_SIZE,
-			tileHeights[tileZ][tileExX][tileExY]
+			tileHeights[tileZ][tileX][tileY]
 		};
 		int[] seVertex = new int[] {
 			(tileX + 1) * Perspective.LOCAL_TILE_SIZE,
 			tileY * Perspective.LOCAL_TILE_SIZE,
-			tileHeights[tileZ][tileExX + 1][tileExY]
+			tileHeights[tileZ][tileX + 1][tileY]
 		};
 		int[] nwVertex = new int[] {
 			tileX * Perspective.LOCAL_TILE_SIZE,
 			(tileY + 1) * Perspective.LOCAL_TILE_SIZE,
-			tileHeights[tileZ][tileExX][tileExY + 1]
+			tileHeights[tileZ][tileX][tileY + 1]
 		};
 		int[] neVertex = new int[] {
 			(tileX + 1) * Perspective.LOCAL_TILE_SIZE,
 			(tileY + 1) * Perspective.LOCAL_TILE_SIZE,
-			tileHeights[tileZ][tileExX + 1][tileExY + 1]
+			tileHeights[tileZ][tileX + 1][tileY + 1]
 		};
 
 		return new int[][] { swVertex, seVertex, nwVertex, neVertex };

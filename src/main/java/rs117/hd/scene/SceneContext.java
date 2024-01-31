@@ -27,7 +27,6 @@ public class SceneContext {
 	public final int id = HDUtils.rand.nextInt() & SceneUploader.SCENE_ID_MASK;
 	public final Scene scene;
 	public final HashSet<Integer> regionIds;
-	public final int expandedMapLoadingChunks;
 
 	public int staticVertexCount = 0;
 	public GpuIntBuffer staticUnorderedModelBuffer;
@@ -65,10 +64,9 @@ public class SceneContext {
 	public final float[] modelFaceNormals = new float[12];
 	public final int[] modelPusherResults = new int[2];
 
-	public SceneContext(Scene scene, int expandedMapLoadingChunks, boolean reuseBuffers, @Nullable SceneContext previous) {
+	public SceneContext(Scene scene, boolean reuseBuffers, @Nullable SceneContext previous) {
 		this.scene = scene;
 		this.regionIds = HDUtils.getSceneRegionIds(scene);
-		this.expandedMapLoadingChunks = expandedMapLoadingChunks;
 
 		if (previous == null) {
 			staticUnorderedModelBuffer = new GpuIntBuffer();
@@ -173,6 +171,6 @@ public class SceneContext {
 	}
 
 	public boolean intersects(AABB... aabbs) {
-		return HDUtils.sceneIntersects(scene, expandedMapLoadingChunks, aabbs);
+		return HDUtils.sceneIntersects(scene, aabbs);
 	}
 }

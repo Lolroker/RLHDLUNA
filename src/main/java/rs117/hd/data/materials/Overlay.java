@@ -1113,9 +1113,7 @@ public enum Overlay {
 			}
 		}
 
-		int tileExX = localLocation.getSceneX() + SceneUploader.SCENE_OFFSET;
-		int tileExY = localLocation.getSceneY() + SceneUploader.SCENE_OFFSET;
-		short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][tileExX][tileExY];
+		short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][localLocation.getSceneX()][localLocation.getSceneY()];
 		Overlay[] overlays = FILTERED_MAP.get((int) overlayId);
 		if (overlays != null) {
 			for (Overlay overlay : overlays) {

@@ -121,7 +121,6 @@ import static net.runelite.api.Perspective.*;
 import static org.lwjgl.opencl.CL10.*;
 import static org.lwjgl.opengl.GL43C.*;
 import static rs117.hd.HdPluginConfig.*;
-import static rs117.hd.scene.SceneUploader.SCENE_OFFSET;
 import static rs117.hd.utils.HDUtils.PI;
 import static rs117.hd.utils.ResourcePath.path;
 
@@ -152,7 +151,7 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 	public static final int UNIFORM_BLOCK_LIGHTS = 3;
 
 	public static final int MAX_FACE_COUNT = 6144;
-	public static final int MAX_DISTANCE = Constants.EXTENDED_SCENE_SIZE;
+	public static final int MAX_DISTANCE = 90;
 	public static final int GROUND_MIN_Y = 350; // how far below the ground models extend
 	public static final int MAX_FOG_DEPTH = 100;
 	public static final int SCALAR_BYTES = 4;
@@ -335,7 +334,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 	private int uniFogColor;
 	private int uniFogDepth;
 	private int uniDrawDistance;
-	private int uniExpandedMapLoadingChunks;
 	private int uniWaterColorLight;
 	private int uniWaterColorMid;
 	private int uniWaterColorDark;
@@ -564,7 +562,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 
 				client.setDrawCallbacks(this);
 				client.setGpuFlags(DrawCallbacks.GPU | DrawCallbacks.HILLSKEW | DrawCallbacks.NORMALS);
-				client.setExpandedMapLoading(getExpandedMapLoadingChunks());
 				// force rebuild of main buffer provider to enable alpha channel
 				client.resizeCanvas();
 
@@ -614,7 +611,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 			client.setGpuFlags(0);
 			client.setDrawCallbacks(null);
 			client.setUnlockedFps(false);
-			client.setExpandedMapLoading(0);
 
 			developerTools.deactivate();
 			modelPusher.shutDown();
@@ -841,7 +837,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 		uniWaterColorMid = glGetUniformLocation(glSceneProgram, "waterColorMid");
 		uniWaterColorDark = glGetUniformLocation(glSceneProgram, "waterColorDark");
 		uniDrawDistance = glGetUniformLocation(glSceneProgram, "drawDistance");
-		uniExpandedMapLoadingChunks = glGetUniformLocation(glSceneProgram, "expandedMapLoadingChunks");
 		uniAmbientStrength = glGetUniformLocation(glSceneProgram, "ambientStrength");
 		uniAmbientColor = glGetUniformLocation(glSceneProgram, "ambientColor");
 		uniLightStrength = glGetUniformLocation(glSceneProgram, "lightStrength");
@@ -1322,7 +1317,7 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 	}
 
 	private void initTileHeightMap(Scene scene) {
-		final int TILE_HEIGHT_BUFFER_SIZE = Constants.MAX_Z * Constants.EXTENDED_SCENE_SIZE * Constants.EXTENDED_SCENE_SIZE * Short.BYTES;
+		final int TILE_HEIGHT_BUFFER_SIZE = Constants.MAX_Z * Constants.SCENE_SIZE * Constants.SCENE_SIZE * Short.BYTES;
 		ShortBuffer tileBuffer = ByteBuffer
 			.allocateDirect(TILE_HEIGHT_BUFFER_SIZE)
 			.order(ByteOrder.nativeOrder())
@@ -1330,8 +1325,8 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 
 		int[][][] tileHeights = scene.getTileHeights();
 		for (int z = 0; z < Constants.MAX_Z; ++z) {
-			for (int y = 0; y < Constants.EXTENDED_SCENE_SIZE; ++y) {
-				for (int x = 0; x < Constants.EXTENDED_SCENE_SIZE; ++x) {
+			for (int y = 0; y < Constants.SCENE_SIZE; ++y) {
+				for (int x = 0; x < Constants.SCENE_SIZE; ++x) {
 					int h = tileHeights[z][x][y];
 					assert (h & 0b111) == 0;
 					h >>= 3;
@@ -1350,7 +1345,7 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I,
-			Constants.EXTENDED_SCENE_SIZE, Constants.EXTENDED_SCENE_SIZE, Constants.MAX_Z,
+			Constants.SCENE_SIZE, Constants.SCENE_SIZE, Constants.MAX_Z,
 			0, GL_RED_INTEGER, GL_SHORT, tileBuffer
 		);
 
@@ -1951,7 +1946,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 			glUniform3fv(uniFogColor, fogColor);
 
 			glUniform1f(uniDrawDistance, getDrawDistance());
-			glUniform1i(uniExpandedMapLoadingChunks, sceneContext.expandedMapLoadingChunks);
 			glUniform1f(uniColorBlindnessIntensity, config.colorBlindnessIntensity() / 100.f);
 
 			float[] waterColorHsv = ColorUtils.srgbToHsv(environmentManager.currentWaterColor);
@@ -2237,7 +2231,7 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 		if (!isActive)
 			return;
 
-		if (skipScene != scene && HDUtils.sceneIntersects(scene, getExpandedMapLoadingChunks(), Area.THE_GAUNTLET)) {
+		if (skipScene != scene && HDUtils.sceneIntersects(scene, Area.THE_GAUNTLET)) {
 			// Some game objects in The Gauntlet are spawned in too late for the initial scene load,
 			// so we skip the first scene load and trigger another scene load the next game tick
 			reloadSceneNextGameTick();
@@ -2261,7 +2255,7 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 			// in use by the client thread, meaning we can reuse all of its buffers if we are loading the
 			// next scene also on the client thread
 			boolean reuseBuffers = client.isClientThread();
-			var context = new SceneContext(scene, getExpandedMapLoadingChunks(), reuseBuffers, sceneContext);
+			var context = new SceneContext(scene, reuseBuffers, sceneContext);
 			// noinspection SynchronizationOnLocalVariableOrMethodParameter
 			synchronized (context) {
 				nextSceneContext = context;
@@ -2449,11 +2443,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 
 				for (var key : pendingConfigChanges) {
 					switch (key) {
-						case KEY_EXPANDED_MAP_LOADING_CHUNKS:
-							client.setExpandedMapLoading(getExpandedMapLoadingChunks());
-							if (client.getGameState() == GameState.LOGGED_IN)
-								client.setGameState(GameState.LOADING);
-							break;
 						case KEY_COLOR_BLINDNESS:
 						case KEY_MACOS_INTEL_WORKAROUND:
 						case KEY_MAX_DYNAMIC_LIGHTS:
@@ -2608,8 +2597,8 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 			return false;
 
 		int[][][] tileHeights = scene.getTileHeights();
-		int x = ((tileExX - SCENE_OFFSET) << Perspective.LOCAL_COORD_BITS) + 64;
-		int z = ((tileExY - SCENE_OFFSET) << Perspective.LOCAL_COORD_BITS) + 64;
+		int x = (tileExX << Perspective.LOCAL_COORD_BITS) + 64;
+		int z = (tileExY << Perspective.LOCAL_COORD_BITS) + 64;
 		int y = Math.max(
 			Math.max(tileHeights[plane][tileExX][tileExY], tileHeights[plane][tileExX][tileExY + 1]),
 			Math.max(tileHeights[plane][tileExX + 1][tileExY], tileHeights[plane][tileExX + 1][tileExY + 1])
@@ -2908,12 +2897,6 @@ public class HdPlugin extends Plugin implements DrawCallbacks {
 
 	public int getDrawDistance() {
 		return HDUtils.clamp(config.drawDistance(), 0, MAX_DISTANCE);
-	}
-
-	private int getExpandedMapLoadingChunks() {
-		if (useLowMemoryMode)
-			return 0;
-		return config.expandedMapLoadingChunks();
 	}
 
 	private void logBufferResize(GLBuffer glBuffer, long newSize) {

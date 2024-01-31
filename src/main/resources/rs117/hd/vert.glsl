@@ -41,7 +41,6 @@ out int gTerrainData;
 uniform int useFog;
 uniform float fogDepth;
 uniform float drawDistance;
-uniform int expandedMapLoadingChunks;
 uniform vec3 cameraPos;
 
 #include uniforms/materials.glsl

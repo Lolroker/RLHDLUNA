@@ -42,8 +42,6 @@ import rs117.hd.data.WaterType;
 import rs117.hd.data.environments.Area;
 import rs117.hd.utils.HDUtils;
 
-import static rs117.hd.scene.SceneUploader.SCENE_OFFSET;
-
 @Slf4j
 public enum Underlay {
 	// Seasonal Winter Textures
@@ -176,9 +174,7 @@ public enum Underlay {
 					return override;
 
 				LocalPoint localLocation = tile.getLocalLocation();
-				int tileExX = localLocation.getSceneX() + SCENE_OFFSET;
-				int tileExY = localLocation.getSceneY() + SCENE_OFFSET;
-				short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][tileExX][tileExY];
+				short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][localLocation.getSceneX()][localLocation.getSceneY()];
 
 				if (hsl[0] >= 9) {
 					switch (plugin.configSeasonalTheme) {
@@ -255,9 +251,8 @@ public enum Underlay {
 					return override;
 
 				LocalPoint localLocation = tile.getLocalLocation();
-				int tileExX = localLocation.getSceneX() + SCENE_OFFSET;
-				int tileExY = localLocation.getSceneY() + SCENE_OFFSET;
-				short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][tileExX][tileExY];
+
+				short overlayId = scene.getOverlayIds()[tile.getRenderLevel()][localLocation.getSceneX()][localLocation.getSceneY()];
 
 				// Grass
 				if (hsl[0] >= 13 ||
@@ -952,9 +947,7 @@ public enum Underlay {
 			}
 		}
 
-		int tileExX = localLocation.getSceneX() + SCENE_OFFSET;
-		int tileExY = localLocation.getSceneY() + SCENE_OFFSET;
-		short underlayId = scene.getUnderlayIds()[tile.getRenderLevel()][tileExX][tileExY];
+		short underlayId = scene.getUnderlayIds()[tile.getRenderLevel()][localLocation.getSceneX()][localLocation.getSceneY()];
 		Underlay[] underlays = FILTERED_MAP.get((int) underlayId);
 		if (underlays != null) {
 			for (Underlay underlay : underlays) {

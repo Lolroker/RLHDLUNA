@@ -73,28 +73,11 @@ public interface HdPluginConfig extends Config
 		description =
 			"The number of tiles to draw in either direction from the camera, up to a maximum of 184.<br>" +
 			"Depending on where the scene is centered, you might only see 16 tiles in one direction, unless you extend map loading.",
-		position = 0,
+		position = 1,
 		section = generalSettings
 	)
 	default int drawDistance() {
 		return 50;
-	}
-
-	String KEY_EXPANDED_MAP_LOADING_CHUNKS = "expandedMapLoadingChunks";
-	@Range(
-		max = 5
-	)
-	@ConfigItem(
-		keyName = KEY_EXPANDED_MAP_LOADING_CHUNKS,
-		name = "Extended map loading",
-		description =
-			"How much further the map should be loaded. The maximum is 5 extra chunks.<br>" +
-			"Note, extending the map can have a very high impact on performance.",
-		position = 1,
-		section = generalSettings
-	)
-	default int expandedMapLoadingChunks() {
-		return 3;
 	}
 
 	@ConfigItem(
